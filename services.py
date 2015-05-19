@@ -9,15 +9,6 @@ import json
 app = Flask(__name__)
 SOCKET_PATH = "/home/nagios/var/rw/live"
 
-def livestatus_query(query_string):
-    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    s.connect(SOCKET_PATH)
-    s.send(query_string)
-    s.send("OutputFormat: json\n")
-    s.send("ResponseHeader: fixed16\n")
-    s.shutdown(socket.SHUT_WR)
-    return s.recv(100000000)
-
 
 def standardize_json(result, headers = None):
     """
