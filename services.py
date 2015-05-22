@@ -29,17 +29,27 @@ def standardize_json(result, headers = None):
     return json.dumps(map(dict,map(header_zip, json_result)))
 
 
-def livestatus_query(table, columns=None, filters=None, limit=None, normalize_results=True):
+def livestatus_query(table, columns=None,
+                     filters=None, limit=None, stats=None,
+                     normalize_results=True):
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     s.connect(SOCKET_PATH)
     query = "GET %s\n" % table
     
+    headers = []
+    
     if columns is not None:
         query += "Columns: %s\n" % " ".join(columns)
-        
+        headers.extend(columns)
+    
     if filters is not None:
         for filter in filters:
             query += "Filter:%s\n" % filter
+    
+    if stats is not None:
+        for stat in stats:
+            query += "Stats:%s\n" % stat
+            headers.append(stat)
     
     if limit is not None:
         query += "Limit: %d\n" % limit
@@ -58,7 +68,9 @@ def livestatus_query(table, columns=None, filters=None, limit=None, normalize_re
     app.logger.debug('Response: %s', body)
     #TODO: make the standardize optional
     if normalize_results is True:
-        return standardize_json(body, columns), status
+        if len(headers) == 0:
+            headers = None
+        return standardize_json(body, headers), status
     else:
         return body, status
 
@@ -91,17 +103,26 @@ def get_livestatus(table):
     if len(columns)==0:
         columns = None
     app.logger.debug("Columns: %s", columns)
+    
+    
     #TODO: currently the filters need to be entered like this:
     # name+%3D+admins, which is not very nice
     filters = request.args.getlist("filter")
     if len(filters)==0:
         filters = None
     app.logger.debug("Filters: %s", filters)
+    
     limit = request.args.get("limit", None, type=int)
     app.logger.debug("Limit: %d", limit)
     
+    stats = request.args.getlist("stats")
+    if len(stats)==0:
+        stats = None
+    app.logger.debug("Stats: %s", stats)
+    
     normalize_results = request.args.get("normalize", True)
-    return livestatus_query(table, columns, filters, limit, normalize_results)
+    
+    return livestatus_query(table, columns, filters, limit, stats, normalize_results)
 
 if __name__ == '__main__':
     app.run(debug=True)
