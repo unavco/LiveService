@@ -29,7 +29,7 @@ def standardize_json(result, headers = None):
     return json.dumps(map(dict,map(header_zip, json_result)))
 
 
-def livestatus_query(table, columns=None, filters=None, limit=None):
+def livestatus_query(table, columns=None, filters=None, limit=None, normalize_results=True):
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     s.connect(SOCKET_PATH)
     query = "GET %s\n" % table
@@ -52,10 +52,15 @@ def livestatus_query(table, columns=None, filters=None, limit=None):
     
     header = s.recv(16)
     status, bytes = parse_header(header)
+    if status != 200:
+        normalize_results = False
     body = s.recv(bytes)
     app.logger.debug('Response: %s', body)
     #TODO: make the standardize optional
-    return standardize_json(body, columns), status
+    if normalize_results is True:
+        return standardize_json(body, columns), status
+    else:
+        return body, status
 
 def parse_header(header):
     app.logger.debug("LiveService Header: %s", header)
@@ -94,7 +99,9 @@ def get_livestatus(table):
     app.logger.debug("Filters: %s", filters)
     limit = request.args.get("limit", None, type=int)
     app.logger.debug("Limit: %d", limit)
-    return livestatus_query(table, columns, filters, limit)
+    
+    normalize_results = request.args.get("normalize", True)
+    return livestatus_query(table, columns, filters, limit, normalize_results)
 
 if __name__ == '__main__':
     app.run(debug=True)
