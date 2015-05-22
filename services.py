@@ -2,11 +2,18 @@
 
 import socket
 from flask import Flask
-from flask import request
+from flask import Request, request
 from functools import partial
 import json
 
+from werkzeug.datastructures import ImmutableOrderedMultiDict
+
+class OrderedRequest(Request):
+    parameter_storage_class = ImmutableOrderedMultiDict
+
 app = Flask(__name__)
+app.request_class = OrderedRequest
+
 SOCKET_PATH = "/home/nagios/var/rw/live"
 
 
@@ -66,7 +73,7 @@ def livestatus_query(table, columns=None,
         normalize_results = False
     body = s.recv(bytes)
     app.logger.debug('Response: %s', body)
-    #TODO: make the standardize optional
+
     if normalize_results is True:
         if len(headers) == 0:
             headers = None
