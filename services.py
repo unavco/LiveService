@@ -14,7 +14,8 @@ class OrderedRequest(Request):
 app = Flask(__name__)
 app.request_class = OrderedRequest
 
-SOCKET_PATH = "/home/nagios/var/rw/live"
+SOCKET_HOST = "lsnag.int.unavco.org"
+SOCKET_PORT = 8080
 
 
 def standardize_json(result, headers = None):
@@ -39,8 +40,8 @@ def standardize_json(result, headers = None):
 def livestatus_query(table, columns=None,
                      filters=None, limit=None, stats=None,
                      normalize_results=True):
-    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    s.connect(SOCKET_PATH)
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((SOCKET_HOST, SOCKET_PORT))
     query = "GET %s\n" % table
     
     headers = []
@@ -132,5 +133,5 @@ def get_livestatus(table):
     return livestatus_query(table, columns, filters, limit, stats, normalize_results)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run("127.0.0.1", 5051, debug=True, use_reloader=False)
 
