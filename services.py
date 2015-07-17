@@ -18,6 +18,7 @@ SOCKET_HOST = "lsnag.int.unavco.org"
 SOCKET_PORT = 8080
 
 
+
 def standardize_json(result, headers = None):
     """
     LiveService returns json with the headers first (if no columns are specified) 
@@ -35,6 +36,23 @@ def standardize_json(result, headers = None):
     #TODO: do we really need to convert back to a string here?
     #TODO: also, this seems a bit complicated
     return json.dumps(map(dict,map(header_zip, json_result)))
+
+
+
+def get_bytes(s, bytes):
+    """
+    Read bytes from socket s and return when we get all of the bytes
+    """
+    if bytes<1024:
+        read_bytes = bytes
+    else:
+        read_bytes = 1024
+    buffer = ''
+    while len(buffer) < bytes:
+        buffer += s.recv(read_bytes)
+        app.logger.debug(buffer)
+        
+    return buffer
 
 
 def livestatus_query(table, columns=None,
@@ -72,7 +90,9 @@ def livestatus_query(table, columns=None,
     status, bytes = parse_header(header)
     if status != 200:
         normalize_results = False
-    body = s.recv(bytes)
+        
+    body = get_bytes(s, bytes)    
+    
     app.logger.debug('Response: %s', body)
 
     if normalize_results is True:
@@ -133,5 +153,5 @@ def get_livestatus(table):
     return livestatus_query(table, columns, filters, limit, stats, normalize_results)
 
 if __name__ == '__main__':
-    app.run("127.0.0.1", 5051, debug=True, use_reloader=False)
+    app.run("127.0.0.1", 5051, debug=True, use_reloader=True)
 
